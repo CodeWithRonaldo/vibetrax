@@ -1,0 +1,379 @@
+.sectionContainer {
+  padding: 6rem 5%;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.sectionInner {
+  max-width: 1400px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.sectionTitle {
+  text-align: center;
+  font-size: 2.5rem;
+  margin-bottom: 3rem;
+  position: relative;
+  color: var(--color-text-primary);
+}
+
+.sectionTitle::after {
+  content: "";
+  position: absolute;
+  bottom: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 4px;
+  background-color: var(--color-primary);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 2rem;
+}
+
+.card {
+  background-color: var(--color-bg-card);
+  border-radius: 15px;
+  padding: 2rem;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.card:hover,
+.card.active {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.featureIcon {
+  font-size: 2.5rem;
+  color: var(--color-primary);
+  transition: transform 0.3s ease;
+}
+
+.card:hover .featureIcon,
+.card.active .featureIcon {
+  transform: scale(1.1);
+}
+
+.featureTitle {
+  font-size: 1.5rem;
+  color: var(--color-text-primary);
+  transition: color 0.3s ease;
+}
+
+.card:hover .featureTitle,
+.card.active .featureTitle {
+  color: var(--color-primary);
+}
+
+.featureDesc {
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+.steps {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 3rem;
+  flex-wrap: wrap;
+  position: relative;
+}
+
+.step {
+  flex: 1;
+  min-width: 250px;
+  padding: 0 1.5rem;
+  text-align: center;
+  margin-bottom: 3rem;
+  position: relative;
+  z-index: 1;
+}
+
+.stepArrow {
+  position: absolute;
+  right: -10px;
+  top: 40px;
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stepArrow svg {
+  width: 24px;
+  height: 24px;
+}
+
+.stepNumber {
+  background-color: var(--color-primary);
+  color: white;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin: 0 auto 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.step:hover .stepNumber {
+  transform: scale(1.1);
+  box-shadow: 0 5px 15px rgba(99, 102, 241, 0.3);
+}
+
+.stepTitle {
+  font-size: 1.3rem;
+  margin-bottom: 1rem;
+  color: var(--color-text-primary);
+}
+
+.stepDesc {
+  color: var(--color-text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.testimonialCard {
+  position: relative;
+}
+
+.testimonialCard::before {
+  content: '"';
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
+  font-size: 4rem;
+  color: var(--color-primary);
+  opacity: 0.1;
+  font-family: serif;
+  line-height: 1;
+}
+
+.testimonialText {
+  font-style: italic;
+  margin-bottom: 1.5rem;
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+  position: relative;
+  z-index: 1;
+}
+
+.testimonialAuthor {
+  display: flex;
+  align-items: center;
+  margin-top: auto;
+}
+
+.authorImage {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  margin-right: 1rem;
+  object-fit: cover;
+  border: 2px solid var(--color-primary);
+}
+
+.authorName {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.authorTitle {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+/* Responsive Styles */
+@media screen and (max-width: 1200px) {
+  .sectionContainer {
+    padding: 5rem 5%;
+  }
+
+  .sectionTitle {
+    font-size: 2.2rem;
+  }
+
+  .grid {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  }
+}
+
+@media screen and (max-width: 992px) {
+  .sectionContainer {
+    padding: 4.5rem 4%;
+  }
+
+  .sectionTitle {
+    font-size: 2rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .sectionTitle::after {
+    width: 50px;
+  }
+
+  .grid {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .card {
+    padding: 1.75rem;
+  }
+
+  .featureTitle {
+    font-size: 1.3rem;
+  }
+
+  .stepArrow {
+    right: -5px;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .sectionContainer {
+    padding: 4rem 4%;
+  }
+
+  .sectionTitle {
+    font-size: 1.8rem;
+    margin-bottom: 2.2rem;
+  }
+
+  .sectionTitle::after {
+    width: 45px;
+    bottom: -12px;
+  }
+
+  .grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .featureIcon {
+    font-size: 2.2rem;
+  }
+
+  .steps {
+    flex-direction: column;
+    align-items: center;
+    margin-top: 2rem;
+  }
+
+  .step {
+    max-width: 450px;
+    width: 100%;
+    margin-bottom: 3rem;
+    padding: 0 1rem;
+  }
+
+  .stepArrow {
+    transform: rotate(90deg);
+    right: 50%;
+    top: auto;
+    bottom: -30px;
+  }
+
+  .step:last-child {
+    margin-bottom: 0;
+  }
+
+  .card {
+    cursor: pointer;
+  }
+}
+
+@media screen and (max-width: 640px) {
+  .sectionContainer {
+    padding: 3.5rem 3%;
+  }
+
+  .sectionTitle {
+    font-size: 1.6rem;
+    margin-bottom: 2rem;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .card {
+    padding: 1.5rem;
+    gap: 1.25rem;
+  }
+
+  .featureTitle {
+    font-size: 1.2rem;
+  }
+
+  .featureDesc {
+    font-size: 0.95rem;
+  }
+
+  .stepNumber {
+    width: 50px;
+    height: 50px;
+    font-size: 1.3rem;
+  }
+
+  .stepTitle {
+    font-size: 1.2rem;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .sectionContainer {
+    padding: 3rem 2%;
+  }
+
+  .sectionTitle {
+    font-size: 1.5rem;
+    margin-bottom: 1.8rem;
+  }
+
+  .sectionTitle::after {
+    width: 40px;
+    height: 3px;
+    bottom: -10px;
+  }
+
+  .card {
+    padding: 1.25rem;
+    gap: 1rem;
+  }
+
+  .featureIcon {
+    font-size: 2rem;
+  }
+
+  .testimonialAuthor {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .authorImage {
+    margin-bottom: 0.75rem;
+    margin-right: 0;
+  }
+
+  .stepArrow {
+    bottom: -25px;
+  }
+}
