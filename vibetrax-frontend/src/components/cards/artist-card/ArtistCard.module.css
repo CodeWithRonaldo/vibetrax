@@ -1,0 +1,78 @@
+.artistCard {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 140px;
+  background-color: var(--color-bg-card);
+  border-radius: 10px;
+  padding: 1rem;
+  /* flex: 1; */
+}
+
+.artistAvatar {
+  /* width: 100%; */
+  object-fit: cover;
+}
+
+.artistName {
+  text-align: center;
+  font-weight: 600;
+}
+
+.artistFollowers {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+/* Tablets and small laptops (992px and below) */
+@media screen and (max-width: 992px) {
+  .artistCard {
+    min-width: 130px;
+    padding: 0.9rem;
+    gap: 0.8rem;
+  }
+}
+
+/* Tablets and large phones (768px and below) */
+@media screen and (max-width: 768px) {
+  .artistCard {
+    min-width: 120px;
+    padding: 0.8rem;
+    gap: 0.7rem;
+  }
+  
+  .artistName {
+    font-size: 0.9rem;
+  }
+  
+  .artistFollowers {
+    font-size: 0.8rem;
+  }
+  
+  /* Scale down the avatar container a bit */
+  .artistAvatar {
+    transform: scale(0.9);
+  }
+}
+
+/* Small phones (576px and below) */
+@media screen and (max-width: 576px) {
+  .artistCard {
+    min-width: 110px;
+    padding: 0.7rem;
+    gap: 0.6rem;
+  }
+  
+  .artistName {
+    font-size: 0.85rem;
+  }
+  
+  .artistFollowers {
+    font-size: 0.75rem;
+  }
+  
+  /* Scale down the avatar container a bit more for small screens */
+  .artistAvatar {
+    transform: scale(0.8);
+  }
+}
