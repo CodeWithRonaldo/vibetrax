@@ -1,0 +1,162 @@
+.hero {
+  height: 100vh;
+  min-height: 600px;
+  display: flex;
+  align-items: center;
+  padding: 0 5%;
+  background: linear-gradient(
+      to right,
+      rgba(10, 10, 22, 0.9),
+      rgba(10, 10, 22, 0.7)
+    ),
+    url("https://images.unsplash.com/photo-1511379938547-c1f69419868d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80")
+      no-repeat center center;
+  background-size: cover;
+  background-attachment: fixed;
+  position: relative;
+}
+
+.heroContent {
+  max-width: 650px;
+  animation: fadeInUp 0.8s ease-out;
+}
+
+.heroTitle {
+  font-size: 3.5rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  line-height: 1.2;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.heroSubtitle {
+  font-size: 1.2rem;
+  margin-bottom: 2rem;
+  opacity: 0.9;
+  line-height: 1.6;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.heroCta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Animation */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Large laptops and desktops (1200px and below) */
+@media screen and (max-width: 1200px) {
+  .heroContent {
+    max-width: 600px;
+  }
+
+  .heroTitle {
+    font-size: 3rem;
+  }
+}
+
+/* Tablets and small laptops (992px and below) */
+@media screen and (max-width: 992px) {
+  .hero {
+    min-height: 500px;
+  }
+
+  .heroContent {
+    max-width: 500px;
+  }
+
+  .heroTitle {
+    font-size: 2.5rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .heroSubtitle {
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+  }
+}
+
+/* Tablets and large phones (768px and below) */
+@media screen and (max-width: 768px) {
+  .hero {
+    padding: 0 4%;
+    text-align: center;
+    justify-content: center;
+    min-height: 450px;
+    background-attachment: scroll;
+  }
+
+  .heroContent {
+    max-width: 450px;
+  }
+
+  .heroTitle {
+    font-size: 2.2rem;
+  }
+
+  .heroCta {
+    justify-content: center;
+  }
+}
+
+/* Small phones (576px and below) */
+@media screen and (max-width: 576px) {
+  .hero {
+    height: 90vh;
+    min-height: 400px;
+    padding: 0 3%;
+  }
+
+  .heroContent {
+    max-width: 100%;
+    padding: 0 1rem;
+  }
+
+  .heroTitle {
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
+  }
+
+  .heroSubtitle {
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .heroCta {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.8rem;
+  }
+
+  .heroCta button {
+    width: 100%;
+    max-width: 250px;
+  }
+}
+
+/* Very small phones (400px and below) */
+@media screen and (max-width: 400px) {
+  .heroTitle {
+    font-size: 1.6rem;
+  }
+
+  .heroSubtitle {
+    font-size: 0.9rem;
+  }
+
+  .heroCta button {
+    padding: 0.8rem 1rem;
+    font-size: 0.9rem;
+  }
+}
