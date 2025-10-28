@@ -1,0 +1,148 @@
+.mainContent {
+  padding: 120px 5% 50px;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(2rem, 4vw, 3rem);
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Grid layout for artist's tracks */
+.row {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(min(100%, clamp(150px, 30vw, 250px)), 1fr)
+  );
+  gap: clamp(1rem, 2vw, 2rem);
+}
+
+/* Comments section styling */
+.commentsSection {
+  margin-bottom: clamp(1.5rem, 3vw, 3rem);
+}
+
+.sectionTitle {
+  font-size: clamp(1.4rem, 4vw, 1.8rem);
+  margin-bottom: clamp(1rem, 2vw, 1.5rem);
+  font-weight: 600;
+  color: #f5f5f7;
+}
+
+.commentForm {
+  display: flex;
+  gap: clamp(0.5rem, 2vw, 1rem);
+  margin-bottom: clamp(1rem, 3vw, 2rem);
+}
+
+.commentAvatar {
+  width: clamp(40px, 8vw, 50px);
+  height: clamp(40px, 8vw, 50px);
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.commentInputContainer {
+  flex: 1;
+  position: relative;
+}
+
+.commentInput {
+  width: 100%;
+  padding: clamp(0.8rem, 2vw, 1rem);
+  border-radius: 30px;
+  border: none;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #f5f5f7;
+  font-size: clamp(0.9rem, 2vw, 1rem);
+  outline: none;
+}
+
+.commentInput::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.commentBtn {
+  position: absolute;
+  right: clamp(0.5rem, 1vw, 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: none;
+  color: #6366f1;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: clamp(1rem, 2vw, 1.2rem);
+}
+
+.commentsList {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 2vw, 1.5rem);
+}
+
+.comment {
+  display: flex;
+  align-items: flex-start;
+  gap: clamp(0.8rem, 2vw, 1rem);
+}
+
+.commentContent {
+  flex: 1;
+  background-color: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  padding: clamp(0.8rem, 2vw, 1rem);
+}
+
+.commentHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.5rem;
+}
+
+.commentUser {
+  font-weight: 600;
+  color: #f5f5f7;
+  font-size: clamp(0.9rem, 2vw, 1rem);
+}
+
+.commentTime {
+  color: #a1a1a1;
+  font-size: clamp(0.75rem, 1.5vw, 0.85rem);
+}
+
+.commentText {
+  color: #d1d1d1;
+  line-height: 1.5;
+  font-size: clamp(0.85rem, 2vw, 0.95rem);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .commentHeader {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .comment {
+    align-items: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .row {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+
+  .commentForm {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .commentAvatar {
+    align-self: center;
+  }
+}
