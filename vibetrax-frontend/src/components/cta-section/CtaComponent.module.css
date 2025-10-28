@@ -1,0 +1,187 @@
+.ctaSection {
+  padding: 6rem 5%;
+  text-align: center;
+  background: var(--gradient-primary);
+  color: white;
+  width: 100%;
+}
+
+.sectionTitle {
+  font-size: 2.5rem;
+  margin-bottom: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.sectionSubtitle {
+  max-width: 700px;
+  margin: 0 auto 2rem;
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+.ctaBox {
+  background: var(--gradient-primary);
+  border-radius: 15px;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 3rem;
+  color: white;
+}
+
+.boxTitle {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  line-height: 1.3;
+}
+
+.boxDesc {
+  max-width: 600px;
+  margin: 0 auto 1.5rem;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.5;
+}
+
+.button {
+  display: inline-block;
+  background-color: white;
+  color: var(--color-primary-darker);
+  padding: 0.75rem 1.5rem;
+  border-radius: 50px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  min-width: 200px;
+}
+
+.button:hover {
+  background-color: var(--color-text-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive Breakpoints */
+@media screen and (max-width: 1200px) {
+  .ctaSection {
+    padding: 5rem 4%;
+  }
+
+  .sectionTitle {
+    font-size: 2.2rem;
+  }
+
+  .boxTitle {
+    font-size: 1.7rem;
+  }
+}
+
+@media screen and (max-width: 992px) {
+  .sectionTitle {
+    font-size: 2rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .sectionSubtitle {
+    font-size: 1.05rem;
+    margin-bottom: 1.8rem;
+  }
+
+  .ctaBox {
+    padding: 1.8rem;
+  }
+
+  .boxTitle {
+    font-size: 1.6rem;
+  }
+
+  .boxDesc {
+    font-size: 0.95rem;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .ctaSection {
+    padding: 4rem 3%;
+  }
+
+  .sectionTitle {
+    font-size: 1.8rem;
+  }
+
+  .sectionSubtitle {
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .ctaBox {
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .boxTitle {
+    font-size: 1.5rem;
+  }
+
+  .button {
+    padding: 0.65rem 1.3rem;
+    min-width: 180px;
+  }
+}
+
+@media screen and (max-width: 576px) {
+  .ctaSection {
+    padding: 3.5rem 2%;
+  }
+
+  .sectionTitle {
+    font-size: 1.6rem;
+  }
+
+  .sectionSubtitle {
+    font-size: 0.95rem;
+  }
+
+  .ctaBox {
+    padding: 1.3rem;
+    border-radius: 12px;
+  }
+
+  .boxTitle {
+    font-size: 1.4rem;
+  }
+
+  .boxDesc {
+    font-size: 0.9rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .button {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+    min-width: 160px;
+  }
+}
+
+@media screen and (max-width: 400px) {
+  .sectionTitle {
+    font-size: 1.5rem;
+  }
+
+  .sectionSubtitle {
+    font-size: 0.9rem;
+    margin-bottom: 1.3rem;
+  }
+
+  .boxTitle {
+    font-size: 1.3rem;
+  }
+
+  .button {
+    min-width: 140px;
+  }
+}
