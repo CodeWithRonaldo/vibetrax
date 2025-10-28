@@ -1,0 +1,54 @@
+.visualizer {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 40px;
+  margin-bottom: 1.5rem;
+  width: 100%;
+}
+
+.visualizerBar {
+  flex: 1;
+  max-width: 5px;
+  min-width: 3px;
+  background-color: var(--color-primary);
+  border-radius: 2px;
+  height: 90%;
+  transform-origin: bottom;
+  transition: height 0.15s ease-out;
+}
+
+.playing {
+  animation: visualize 0.8s infinite ease-in-out alternate;
+  animation-delay: calc(var(--index) * 0.05s);
+}
+
+.paused {
+  height: 20%;
+  animation: none;
+}
+
+@keyframes visualize {
+  0%,
+  100% {
+    height: calc(20% + (var(--index) * 2%));
+    background-color: var(--color-primary);
+  }
+  50% {
+    height: calc(80% - (var(--index) * 2%));
+    background-color: var(--color-primary-dark);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .visualizer {
+    height: 30px;
+    gap: 1px;
+  }
+
+  .visualizerBar {
+    max-width: 4px;
+    min-width: 2px;
+  }
+}

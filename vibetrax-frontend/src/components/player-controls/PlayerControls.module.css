@@ -1,0 +1,219 @@
+audio{
+  width: 100%;
+  
+}
+
+.audio::-webkit-media-controls-enclosure{
+  background-color: var(--color-bg-primary)
+}
+
+audio::-webkit-media-controls-play-button,    
+audio::-webkit-media-controls-current-time-display,
+audio::-webkit-media-controls-time-remaining-display,
+audio::-webkit-media-controls-timeline,
+audio::-webkit-media-controls-mute-button,
+audio::-webkit-media-controls-volume-slider {
+   filter: invert(1);
+ }
+ 
+ 
+ /* audio::-webkit-media-controls-return-to-realtime-button{
+   filter: invert(1);
+ } */
+
+ /* .audio::-webkit-media-controls-panel{
+  background: var(--color-bg-primary);
+}
+.audio::-webkit-media-controls-play-button{
+  background-color: var(--color-primary-dark) ;
+  width: 30px;
+  height: 30px;
+  padding: 20px;
+  filter: invert(1);
+ 
+  border-radius: 50%;
+} */
+
+
+.container {
+  width: 100%;
+  margin-top: 30px;
+  
+}
+
+.progressWrapper {
+  margin-bottom: 15px;
+  width: 100%;
+}
+
+.controlsSection {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  /* width: 100%; */
+}
+
+/* .audioPlayer {
+  display: flex;
+  align-items: center;
+  width: auto;
+  
+} */
+
+.buttons{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* width: auto; */
+}
+
+.forwardBackward {
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  font-family: monospace;
+  font-size: 30px;
+  cursor: pointer;
+  padding: 10px;
+}
+
+.forwardBackward:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.playPause {
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: monospace;
+  font-size: 42px;
+  cursor: pointer;
+  padding: 10px;
+  width: 75px;
+  height: 75px;
+  border-radius: 50%;
+  background-color: #6366f1;
+}
+
+.duration {
+  font-family: monospace;
+  font-size: 20px;
+  color: #a1a1a1;
+  margin-left: 10px;
+  margin-right: 10px;
+}
+
+.currentTime {
+  font-family: monospace;
+  font-size: 20px;
+  color: #a1a1a1;
+  margin-left: 25px;
+}
+
+.progress {
+  --bar-bg: grey;
+  --seek-before-width: 0;
+  --seek-before-color: #0b5791;
+  --knobby: #6366f1;
+  --selectedKnobby: #26c6da;
+  
+  appearance: none;
+  background: var(--bar-bg);
+  border-radius: 10px;
+  position: relative;
+  height: 10px;
+  width: 100%;
+  outline: none;
+}
+
+/* progressbar for safari */
+.progress::-webkit-slider-runnable-track {
+  background: var(--bar-bg);
+  border-radius: 10px;
+  height: 10px;
+  position: relative;
+  height: 10px;
+  width: 100%;
+  outline: none;
+}
+
+/* progressbar for firefox */
+.progress::-moz-range-track {
+  background: var(--bar-bg);
+  border-radius: 10px;
+  height: 10px;
+  width: 100%;
+  outline: none;
+}
+
+.progress::-moz-focus-outer {
+  border: 0;
+}
+
+/* progress bar for chrome and safari */
+.progress::before {
+  content: '';
+  background: var(--seek-before-color);
+  background-color: var(--seek-before-color);
+  height: 100%;
+  border-radius: 10px;
+  width: var(--seek-before-width);
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  cursor: pointer;
+}
+
+/* progressbar for firefox */
+.progress::-moz-range-progress {
+  background: var(--seek-before-color);
+  border-radius: 10px;
+  height: 100%;
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+}
+
+/* knobby for chrome and safari */
+.progress::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  background: var(--knobby);
+  border-radius: 50%;
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  border: none;
+  position: relative;
+  margin: -2px 0 0 0;
+  z-index: 3;
+  box-sizing: border-box;
+}
+
+/* Knobby while dragging for chrome and safari */
+.progress::-webkit-slider-thumb {
+  transform: scale(1.2);
+  background: var(--selectedKnobby);
+}
+
+/* knobby for firefox */
+.progress::-moz-range-thumb {
+  background: var(--knobby);
+  border-radius: 50%;
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  border: transparent;
+  position: relative;
+  z-index: 3;
+  box-sizing: border-box;
+}
+
+/* knobby while dragging for firefox */
+.progress:active::-moz-range-thumb {
+  transform: scale(1.2);
+  background: var(--selectedKnobby);
+}
