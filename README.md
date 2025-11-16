@@ -46,7 +46,7 @@ Mr. A and his collaborators receive **instant, transparent payouts** on every pu
 - **Collaborators**: Track songs they worked on and monitor earnings.
 - **Fans**: Stream, subscribe, own music.
 
-Each user has a dashboard accessible after connecting a wallet or logging in via zkLogin.
+Each user has a dashboard accessible after connecting a wallet.
 
 ## Tech Stack
 
