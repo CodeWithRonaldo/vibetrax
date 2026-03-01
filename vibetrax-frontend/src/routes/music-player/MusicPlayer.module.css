@@ -1,148 +1,231 @@
-.mainContent {
-  padding: 120px 5% 50px;
+.playerContainer {
+  padding: 0;
+  margin: 0;
+  background: var(--color-bg-primary);
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: clamp(2rem, 4vw, 3rem);
-  max-width: 1400px;
+}
+
+/* Header */
+.playerHeader {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background: rgba(10, 10, 22, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(99, 102, 241, 0.1);
+}
+
+.backBtn {
+  background: none;
+  border: none;
+  color: var(--color-text-primary);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.backBtn:hover {
+  color: var(--color-primary);
+}
+
+.headerTitle {
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--color-text-muted);
+}
+
+/* Album Hero */
+.albumHero {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.albumOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(10, 10, 22, 0.6) 100%
+  );
+}
+
+.albumArtContainer {
+  position: relative;
+  width: 90%;
+  aspect-ratio: 1;
+  z-index: 2;
+}
+
+.albumArt {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+/* Track Info Container */
+.trackInfoContainer {
+  flex: 1;
+  padding: 2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  max-width: 600px;
   margin: 0 auto;
   width: 100%;
 }
 
-/* Grid layout for artist's tracks */
-.row {
-  display: grid;
-  grid-template-columns: repeat(
-    auto-fill,
-    minmax(min(100%, clamp(150px, 30vw, 250px)), 1fr)
-  );
-  gap: clamp(1rem, 2vw, 2rem);
+.trackHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
 }
 
-/* Comments section styling */
-.commentsSection {
-  margin-bottom: clamp(1.5rem, 3vw, 3rem);
+.trackMeta {
+  flex: 1;
+}
+
+.trackTitle {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  color: var(--color-text-primary);
+}
+
+.trackArtist {
+  font-size: 1rem;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.likeBtn {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  transition: color 0.2s ease;
+}
+
+.likeBtn:hover {
+  color: var(--color-primary);
+}
+
+.likeBtn.liked {
+  color: #ff3b30;
+}
+
+/* Action Buttons */
+.actionButtons {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.upgradeBtn,
+.shareBtn {
+  flex: 1;
+  min-width: 150px;
+  padding: 0.75rem 1.5rem;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 24px;
+  background: none;
+  color: var(--color-primary);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.upgradeBtn:hover {
+  background: var(--color-primary);
+  color: white;
+}
+
+.shareBtn:hover {
+  background: rgba(99, 102, 241, 0.1);
+}
+
+/* Sections */
+.creditsSection,
+.moreSection {
+  padding: 2rem 1.5rem;
+  border-top: 1px solid rgba(99, 102, 241, 0.1);
 }
 
 .sectionTitle {
-  font-size: clamp(1.4rem, 4vw, 1.8rem);
-  margin-bottom: clamp(1rem, 2vw, 1.5rem);
-  font-weight: 600;
-  color: #f5f5f7;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 1.5rem 0;
+  color: var(--color-text-primary);
 }
 
-.commentForm {
-  display: flex;
-  gap: clamp(0.5rem, 2vw, 1rem);
-  margin-bottom: clamp(1rem, 3vw, 2rem);
+.tracksGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1.5rem;
 }
 
-.commentAvatar {
-  width: clamp(40px, 8vw, 50px);
-  height: clamp(40px, 8vw, 50px);
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.commentInputContainer {
-  flex: 1;
-  position: relative;
-}
-
-.commentInput {
-  width: 100%;
-  padding: clamp(0.8rem, 2vw, 1rem);
-  border-radius: 30px;
-  border: none;
-  background-color: rgba(255, 255, 255, 0.1);
-  color: #f5f5f7;
-  font-size: clamp(0.9rem, 2vw, 1rem);
-  outline: none;
-}
-
-.commentInput::placeholder {
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.commentBtn {
-  position: absolute;
-  right: clamp(0.5rem, 1vw, 10px);
-  top: 50%;
-  transform: translateY(-50%);
-  border: none;
-  background: none;
-  color: #6366f1;
-  font-weight: 600;
-  cursor: pointer;
-  font-size: clamp(1rem, 2vw, 1.2rem);
-}
-
-.commentsList {
-  display: flex;
-  flex-direction: column;
-  gap: clamp(1rem, 2vw, 1.5rem);
-}
-
-.comment {
-  display: flex;
-  align-items: flex-start;
-  gap: clamp(0.8rem, 2vw, 1rem);
-}
-
-.commentContent {
-  flex: 1;
-  background-color: rgba(255, 255, 255, 0.03);
-  border-radius: 12px;
-  padding: clamp(0.8rem, 2vw, 1rem);
-}
-
-.commentHeader {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  margin-bottom: 0.5rem;
-}
-
-.commentUser {
-  font-weight: 600;
-  color: #f5f5f7;
-  font-size: clamp(0.9rem, 2vw, 1rem);
-}
-
-.commentTime {
-  color: #a1a1a1;
-  font-size: clamp(0.75rem, 1.5vw, 0.85rem);
-}
-
-.commentText {
-  color: #d1d1d1;
-  line-height: 1.5;
-  font-size: clamp(0.85rem, 2vw, 0.95rem);
-}
-
-/* Responsive adjustments */
 @media (max-width: 768px) {
-  .commentHeader {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
+  .albumHero {
+    aspect-ratio: auto;
+    min-height: 350px;
   }
 
-  .comment {
-    align-items: center;
+  .trackTitle {
+    font-size: 1.5rem;
+  }
+
+  .tracksGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
   }
 }
 
 @media (max-width: 480px) {
-  .row {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  .trackInfoContainer {
+    padding: 1.5rem 1rem;
+    gap: 1.5rem;
   }
 
-  .commentForm {
-    flex-direction: column;
-    align-items: center;
+  .trackTitle {
+    font-size: 1.25rem;
   }
 
-  .commentAvatar {
-    align-self: center;
+  .actionButtons {
+    gap: 0.75rem;
+  }
+
+  .upgradeBtn,
+  .shareBtn {
+    min-width: 120px;
+    padding: 0.6rem 1rem;
   }
 }

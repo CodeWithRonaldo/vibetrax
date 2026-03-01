@@ -1,67 +1,123 @@
 import { Link, NavLink } from "react-router-dom";
 import styles from "./Header.module.css";
-import { ConnectButton, ConnectModal, useCurrentAccount } from "@iota/dapp-kit";
+import { ConnectButton, useCurrentAccount } from "@iota/dapp-kit";
 import vibetraxLogo from "../../assets/vibetraxlogo2.png";
 import { useState } from "react";
-import { FaBars, FaTimes } from "react-icons/fa";
+import {
+  FaBars,
+  FaTimes,
+  FaHome,
+  FaCompass,
+  FaPlus,
+  FaUser,
+  FaMusic,
+} from "react-icons/fa";
 
 const Header = () => {
   const currentAccount = useCurrentAccount();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [open, setOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
+  const closeSidebar = () => {
+    setIsSidebarOpen(false);
   };
 
   return (
-    <header className={styles.header}>
-      <Link to="/" className={styles.logo}>
-        <img src={vibetraxLogo} alt="VibeTrax logo" />
-      </Link>
+    <>
+      {/* Top Header Bar */}
+      <header className={styles.header}>
+        <div className={styles.headerLeft}>
+          <button
+            className={styles.hamburger}
+            onClick={toggleSidebar}
+            aria-label="Toggle navigation"
+          >
+            {isSidebarOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
+          </button>
+          <Link to="/" className={styles.logo}>
+            <img src={vibetraxLogo} alt="VibeTrax" />
+          </Link>
+        </div>
 
-      {/* Mobile menu button */}
-      <button className={styles.menuButton} onClick={toggleMenu}>
-        {isMenuOpen ? <FaTimes /> : <FaBars />}
-      </button>
+        <div className={styles.headerRight}>
+          <ConnectButton />
+        </div>
+      </header>
 
-      <nav className={`${styles.nav} ${isMenuOpen ? styles.navOpen : ""}`}>
-        <ul className={styles.navLinks}>
-          <li>
+      {/* Sidebar Navigation */}
+      <aside
+        className={`${styles.sidebar} ${isSidebarOpen ? styles.sidebarOpen : ""}`}
+      >
+        <nav className={styles.sidebarNav}>
+          {/* Primary Navigation */}
+          <div className={styles.navGroup}>
             <NavLink
-              to={"/"}
-              className={({ isActive }) => (isActive ? styles.active : "")}
-              onClick={() => setIsMenuOpen(false)}
+              to="/"
+              className={({ isActive }) =>
+                `${styles.navLink} ${isActive ? styles.navLinkActive : ""}`
+              }
+              onClick={closeSidebar}
             >
-              Home
+              <FaHome className={styles.navIcon} />
+              <span>Home</span>
             </NavLink>
-          </li>
-          <li>
             <NavLink
-              to={"discover"}
-              className={({ isActive }) => (isActive ? styles.active : "")}
-              onClick={() => setIsMenuOpen(false)}
+              to="/discover"
+              className={({ isActive }) =>
+                `${styles.navLink} ${isActive ? styles.navLinkActive : ""}`
+              }
+              onClick={closeSidebar}
             >
-              Discover
+              <FaCompass className={styles.navIcon} />
+              <span>Discover</span>
             </NavLink>
-          </li>
+          </div>
+
+          {/* Your Library */}
           {currentAccount?.address && (
-            <li>
+            <div className={styles.navGroup}>
+              <div className={styles.navGroupLabel}>Your Library</div>
               <NavLink
-                to={`profile/${currentAccount?.address}`}
-                className={({ isActive }) => (isActive ? styles.active : "")}
-                onClick={() => setIsMenuOpen(false)}
+                to={`/profile/${currentAccount.address}`}
+                className={({ isActive }) =>
+                  `${styles.navLink} ${isActive ? styles.navLinkActive : ""}`
+                }
+                onClick={closeSidebar}
               >
-                Profile
+                <FaUser className={styles.navIcon} />
+                <span>Your Profile</span>
               </NavLink>
-            </li>
+              <NavLink
+                to="/discover"
+                className={styles.navLink}
+                onClick={closeSidebar}
+              >
+                <FaMusic className={styles.navIcon} />
+                <span>Liked Songs</span>
+              </NavLink>
+              <NavLink
+                to="/upload"
+                className={({ isActive }) =>
+                  `${styles.navLink} ${isActive ? styles.navLinkActive : ""}`
+                }
+                onClick={closeSidebar}
+              >
+                <FaPlus className={styles.navIcon} />
+                <span>Share Music</span>
+              </NavLink>
+            </div>
           )}
-          <li className={styles.connectButton}>
-            <ConnectButton className={styles.connectModal} />
-          </li>
-        </ul>
-      </nav>
-    </header>
+        </nav>
+      </aside>
+
+      {/* Sidebar Overlay for Mobile */}
+      {isSidebarOpen && (
+        <div className={styles.overlay} onClick={closeSidebar} />
+      )}
+    </>
   );
 };
 

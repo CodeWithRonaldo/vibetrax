@@ -1,0 +1,17 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding-top: 64px;
+  padding-left: 0;
+}
+
+@media (min-width: 1024px) {
+  .root {
+    padding-left: 250px;
+  }
+}
+
+main {
+  flex: 1;
+}

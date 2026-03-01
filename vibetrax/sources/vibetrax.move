@@ -59,6 +59,7 @@ module vibetrax::vibetrax {
     use iota::table::Table;
     use iota::table;
     use iota::transfer::public_transfer;
+    
 
     // === Errors ===
     const EINVALID_PURCHASE: u64 = 1;
@@ -74,12 +75,19 @@ module vibetrax::vibetrax {
     const EADDRESS_MISMATCH: u64 = 11;
     const EALREADY_LIKED: u64 = 12;
     const EALREADY_STREAMED: u64 = 13;
+    const ESUBSCRIPTION_EXPIRED: u64 = 14;
+    const ESUBSCRIPTION_MISMATCH: u64 = 15;
 
     // === Constants ===
     const BASIS_POINTS: u64 = 10_000; // For percentage calculations
     const NANOS: u64 = 1_000_000_000;
     const LIKE_VALUE_INCREASE: u64 = 2_000_000; // 0.002 IOTA in nanos
     const PLATFORM_FEE: u64 = 100; // 1% fee in basis points
+    const SUBSCRIPTION_PRICE: u64 = 5_000_000_000; // 5 IOTA in nanos
+    const SUBSCRIPTION_DURATION_MS: u64 = 30 * 24 * 60 * 60 * 1000; // 30 days
+    const STREAM_TOKEN_REWARD: u64 = 10; // however many tokens per stream
+    const TREASURY_ADDRESS: address = @0x0; // TODO: replace with your actual wallet address
+
 
     // === Structs ==
     public struct User has store, copy, drop {
@@ -148,9 +156,76 @@ module vibetrax::vibetrax {
         amount: u64
     }
 
+    public struct MusicSaleToggled has copy, drop {
+        music_id: ID,
+        for_sale: bool
+    }
+
+    public struct MusicUpdated has copy, drop {
+        music_id: ID
+    }
+
+    public struct SubscriptionCreated has copy, drop {
+        subscriber: address,
+        expiry_ms: u64
+    }
+
+    public struct SubscriptionRenewed has copy, drop {
+        subscriber: address,
+        new_expiry_ms: u64
+    }
+
+    public struct Subscription has key {
+        id: UID,
+        subscriber: address,
+        expiry_ms: u64
+
+    }
+
     // === Method Aliases ===
 
     // === Public-Mutative Functions ===
+
+    public fun subscribe(
+        payment: Coin<IOTA>,
+        clock: &Clock,
+        ctx: &mut TxContext
+
+    ){
+        let subscriber = ctx.sender();
+        assert!(payment.value()  == SUBSCRIPTION_PRICE, EINSUFFICIENT_AMOUNT );
+
+        public_transfer(payment, TREASURY_ADDRESS);
+
+        let expiry_ms = clock.timestamp_ms() + SUBSCRIPTION_DURATION_MS;
+        event::emit(SubscriptionCreated { subscriber, expiry_ms });
+
+        transfer::transfer(
+        Subscription { id: object::new(ctx), subscriber, expiry_ms },
+        subscriber
+    );
+    }
+
+    public fun renew_subscription(
+        subscription: &mut Subscription,
+        payment: Coin<IOTA>,
+        clock: &Clock,
+        ctx: &mut TxContext
+    ) {
+        let subscriber = ctx.sender();
+        assert!(subscription.subscriber == subscriber, ESUBSCRIPTION_MISMATCH);
+        assert!(payment.value() == SUBSCRIPTION_PRICE, EINSUFFICIENT_AMOUNT);
+
+        public_transfer(payment, TREASURY_ADDRESS);
+
+        let now = clock.timestamp_ms();
+        // Extend from current expiry or now, whichever is later (no lost time on early renewal)
+        let base = if (subscription.expiry_ms > now) { subscription.expiry_ms } else { now };
+        subscription.expiry_ms = base + SUBSCRIPTION_DURATION_MS;
+
+        event::emit(SubscriptionRenewed { subscriber, new_expiry_ms: subscription.expiry_ms });
+    }
+
     public fun upload_music(
         title: String,
         description: String,
@@ -334,9 +409,17 @@ module vibetrax::vibetrax {
 
     }
 
-    public fun stream_music(music: &mut Music, liker: User, ctx: &mut TxContext) {
+    public fun stream_music(
+        music: &mut Music,
+        subscription: &Subscription,
+        liker: User,
+        clock: &Clock,
+        ctx: &mut TxContext
+    ) {
         let signer_address = tx_context::sender(ctx);
         assert!(liker.user_address == signer_address, EADDRESS_MISMATCH);
+        assert!(subscription.subscriber == signer_address, ESUBSCRIPTION_MISMATCH);
+        assert!(clock.timestamp_ms() <= subscription.expiry_ms, ESUBSCRIPTION_EXPIRED);
         // Add check to ensure one stream per account per music
         assert!(!music.streaming_table.contains(liker.user_address), EALREADY_STREAMED);
         music.streaming_count = music.streaming_count + 1;
@@ -344,7 +427,7 @@ module vibetrax::vibetrax {
         // 10,000,000,000
         //      2,000,000
         // -----------------
-        // 10,002,000,000 
+        // 10,002,000,000
         // -----------------
         // 10,002,000,000 / 1,000,000,000 = 10.002 IOTA
 
@@ -352,6 +435,54 @@ module vibetrax::vibetrax {
         music.streaming_table.add(liker.user_address, true);
     }
 
+
+    public fun toggle_sale(music: &mut Music, ctx: &mut TxContext) {
+        let signer = ctx.sender();
+        assert!(music.current_owner.user_address == signer, ENOT_OWNER);
+        music.for_sale = !music.for_sale;
+
+        event::emit(MusicSaleToggled {
+            music_id: music.id.to_inner(),
+            for_sale: music.for_sale
+        });
+    }
+
+    public fun update_music(
+        music: &mut Music,
+        title: Option<String>,
+        description: Option<String>,
+        genre: Option<String>,
+        music_image: Option<String>,
+        preview_music: Option<String>,
+        full_music: Option<String>,
+        new_collaborators: Option<vector<User>>,
+        ctx: &mut TxContext
+    ) {
+        let signer = ctx.sender();
+        assert!(music.artist.user_address == signer, ENOT_ARTIST);
+        // All updates locked after first sale
+        assert!(music.current_owner.user_address == music.artist.user_address, EINVALID_PURCHASE);
+
+        if (title.is_some()) { music.title = title.destroy_some() };
+        if (description.is_some()) { music.description = description.destroy_some() };
+        if (genre.is_some()) { music.genre = genre.destroy_some() };
+        if (music_image.is_some()) { music.music_image = music_image.destroy_some() };
+        if (preview_music.is_some()) { music.preview_music = preview_music.destroy_some() };
+        if (full_music.is_some()) { music.full_music = full_music.destroy_some() };
+
+        if (new_collaborators.is_some()) {
+            let collaborators = new_collaborators.destroy_some();
+            if (collaborators.length() > 0) {
+                collaborators.do_ref!(|collaborator| {
+                    let count = count_address_occurrences(&collaborators, collaborator.user_address);
+                    assert!(count <= 1, EHAS_DUPLICATES);
+                });
+            };
+            music.collaborators = collaborators;
+        };
+
+        event::emit(MusicUpdated { music_id: music.id.to_inner() });
+    }
 
     // === Public-View Functions ===
 
