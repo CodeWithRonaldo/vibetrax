@@ -28,12 +28,12 @@
     FEATURES:
     1.(DONE) Upload Music (title, description, genre, image, previewAudio, fullAudio, collaborators[{name, role, address, percentage, hasRoyalty}], initialPrice)
     2. (DONE) Purchase Music (Transferring ownership to purchaser, music is considered SOLD, distribution split)
-    3. Subscription (30 days subscription with IOTA, that allows unlimited streams of fullAudio of all music, earn platform tokens)
+    3. (DONE) Subscription (30 days subscription with IOTA, that allows unlimited streams of fullAudio of all music, earn platform tokens)
     4. (PARTIALY_DONE) Stream(review for non-premium, fullAudio for premium, one stream per account per music, only subscribed users earn token for streaming, value of music increase)
     5. (DONE) Like (one per account, increases value of music)
     6. Tip (Just platform Tokens sent to artist)
     7. Boost (Artist decide to boost their music with platform tokens. Boost requires you to buy a plan. Every plan has their unique price)
-    8. Update [add/remove from market, update music details], Delete
+    8. (DONE) Update [add/remove from market, update music details], Delete
     9. Withdraw (smart contract / Frontend)
     10. (DONE) Platform Fee: 1%
     11. Update platform fee (Admin)
@@ -49,9 +49,12 @@
     // Future Plans
     1. Stream-To-Earn (x402) -> Pay as you go. Users pay for streaming themselves (PROPOSED: x402)
     2. Governance ->  Vote on platform decisions (Platform Fee)
+    3. Collaborator update will need multisig approval from all collaborators (PROPOSED: Multisig)
+    4. Music update will need multisig approval from all collaborators (PROPOSED: Multisig)
 */
 module vibetrax::vibetrax {
     use std::ascii::String;
+    use std::string; // needed for Display field template strings
     use iota::clock::Clock;
     use iota::event;
     use iota::coin::Coin;
@@ -59,6 +62,8 @@ module vibetrax::vibetrax {
     use iota::table::Table;
     use iota::table;
     use iota::transfer::public_transfer;
+    use iota::package;  // for claiming Publisher from the OTW
+    use iota::display;  // for creating Display<Music>
     
 
     // === Errors ===
@@ -90,6 +95,13 @@ module vibetrax::vibetrax {
 
 
     // === Structs ==
+
+    // ── One-Time Witness ────────────────────────────────────────────────────────
+    // MUST match the module name in ALL_CAPS and have only `drop`.
+    // Passed into `init` by the Move runtime exactly once, at publish time.
+    // Used here to claim a Publisher, which is required to create Display<Music>.
+    public struct VIBETRAX has drop {}
+
     public struct User has store, copy, drop {
         name: String,
         user_address: address,
@@ -116,6 +128,13 @@ module vibetrax::vibetrax {
         collaborators: vector<User>,
         for_sale: bool,
         creation_time: u64
+    }
+
+    public struct Subscription has key {
+        id: UID,
+        subscriber: User,
+        price: u64,
+        expiry_ms: u64
     }
 
     // === Events ===
@@ -162,70 +181,74 @@ module vibetrax::vibetrax {
     }
 
     public struct MusicUpdated has copy, drop {
-        music_id: ID
+        music_id: ID,
+        title: String,
+        description: String,
+        genre: String,
+        music_image: String,
+        preview_music: String,
+        full_music: String,
     }
 
     public struct SubscriptionCreated has copy, drop {
-        subscriber: address,
+        subscriber: User,
+        price: u64,
         expiry_ms: u64
     }
 
     public struct SubscriptionRenewed has copy, drop {
-        subscriber: address,
+        subscriber: User,
+        price: u64,
         new_expiry_ms: u64
-    }
-
-    public struct Subscription has key {
-        id: UID,
-        subscriber: address,
-        expiry_ms: u64
-
     }
 
     // === Method Aliases ===
 
+    // === Init ===
+
+    // ── init ────────────────────────────────────────────────────────────────────
+    // Runs automatically ONCE when the package is published.
+    // Sets up Display<Music> so wallets and explorers can render Music NFTs nicely.
+    //
+    // HOW DISPLAY WORKS:
+    //   1. `package::claim(otw, ctx)` exchanges the OTW for a Publisher object.
+    //      Publisher proves this module owns the `Music` type.
+    //   2. `display::new<Music>(&publisher, ctx)` creates a Display template for Music.
+    //   3. You add key→value pairs where values are template strings.
+    //      `{field_name}` is replaced at query time with the actual field value.
+    //      Only TOP-LEVEL fields of Music can be referenced (no nested access).
+    //   4. `display.update_version()` commits the fields — must call this or
+    //      the display won't be visible to indexers.
+    //   5. Both Publisher and Display are transferred to the deployer (ctx.sender())
+    //      so you can update display fields later if needed.
+    //      If you freeze them instead, they become permanent and uneditable.
+    fun init(otw: VIBETRAX, ctx: &mut TxContext) {
+        // Claim Publisher — proves this module created the Music type
+        let publisher = package::claim(otw, ctx);
+
+        // Create the Display template for Music NFTs
+        let mut music_display = display::new<Music>(&publisher, ctx);
+
+        // Display field names are what wallets/explorers look for.
+        // Standard fields: name, description, image_url, creator, link
+        // Values use {field_name} to reference Music struct fields at render time.
+        music_display.add(string::utf8(b"name"),        string::utf8(b"{title}"));
+        music_display.add(string::utf8(b"description"), string::utf8(b"{description}"));
+        // music_image is the IPFS/URL string stored on the Music object
+        music_display.add(string::utf8(b"image_url"),   string::utf8(b"{music_image}"));
+        // genre is a bonus field — some explorers show custom fields
+        music_display.add(string::utf8(b"genre"),       string::utf8(b"{genre}"));
+
+        // Commit the display fields — indexers won't pick them up until this is called
+        music_display.update_version();
+
+        // Transfer Publisher and Display to deployer so fields can be updated later.
+        // To lock them permanently, use transfer::public_freeze_object() instead.
+        public_transfer(publisher, ctx.sender());
+        public_transfer(music_display, ctx.sender());
+    }
+
     // === Public-Mutative Functions ===
-
-    public fun subscribe(
-        payment: Coin<IOTA>,
-        clock: &Clock,
-        ctx: &mut TxContext
-
-    ){
-        let subscriber = ctx.sender();
-        assert!(payment.value()  == SUBSCRIPTION_PRICE, EINSUFFICIENT_AMOUNT );
-
-        public_transfer(payment, TREASURY_ADDRESS);
-
-        let expiry_ms = clock.timestamp_ms() + SUBSCRIPTION_DURATION_MS;
-        event::emit(SubscriptionCreated { subscriber, expiry_ms });
-
-        transfer::transfer(
-        Subscription { id: object::new(ctx), subscriber, expiry_ms },
-        subscriber
-    );
-    }
-
-    public fun renew_subscription(
-        subscription: &mut Subscription,
-        payment: Coin<IOTA>,
-        clock: &Clock,
-        ctx: &mut TxContext
-    ) {
-        let subscriber = ctx.sender();
-        assert!(subscription.subscriber == subscriber, ESUBSCRIPTION_MISMATCH);
-        assert!(payment.value() == SUBSCRIPTION_PRICE, EINSUFFICIENT_AMOUNT);
-
-        public_transfer(payment, TREASURY_ADDRESS);
-
-        let now = clock.timestamp_ms();
-        // Extend from current expiry or now, whichever is later (no lost time on early renewal)
-        let base = if (subscription.expiry_ms > now) { subscription.expiry_ms } else { now };
-        subscription.expiry_ms = base + SUBSCRIPTION_DURATION_MS;
-
-        event::emit(SubscriptionRenewed { subscriber, new_expiry_ms: subscription.expiry_ms });
-    }
-
     public fun upload_music(
         title: String,
         description: String,
@@ -418,7 +441,7 @@ module vibetrax::vibetrax {
     ) {
         let signer_address = tx_context::sender(ctx);
         assert!(liker.user_address == signer_address, EADDRESS_MISMATCH);
-        assert!(subscription.subscriber == signer_address, ESUBSCRIPTION_MISMATCH);
+        assert!(subscription.subscriber.user_address == signer_address, ESUBSCRIPTION_MISMATCH);
         assert!(clock.timestamp_ms() <= subscription.expiry_ms, ESUBSCRIPTION_EXPIRED);
         // Add check to ensure one stream per account per music
         assert!(!music.streaming_table.contains(liker.user_address), EALREADY_STREAMED);
@@ -435,18 +458,6 @@ module vibetrax::vibetrax {
         music.streaming_table.add(liker.user_address, true);
     }
 
-
-    public fun toggle_sale(music: &mut Music, ctx: &mut TxContext) {
-        let signer = ctx.sender();
-        assert!(music.current_owner.user_address == signer, ENOT_OWNER);
-        music.for_sale = !music.for_sale;
-
-        event::emit(MusicSaleToggled {
-            music_id: music.id.to_inner(),
-            for_sale: music.for_sale
-        });
-    }
-
     public fun update_music(
         music: &mut Music,
         title: Option<String>,
@@ -455,11 +466,10 @@ module vibetrax::vibetrax {
         music_image: Option<String>,
         preview_music: Option<String>,
         full_music: Option<String>,
-        new_collaborators: Option<vector<User>>,
         ctx: &mut TxContext
     ) {
-        let signer = ctx.sender();
-        assert!(music.artist.user_address == signer, ENOT_ARTIST);
+        let signer_address = ctx.sender();
+        assert!(music.artist.user_address == signer_address, ENOT_ARTIST);
         // All updates locked after first sale
         assert!(music.current_owner.user_address == music.artist.user_address, EINVALID_PURCHASE);
 
@@ -470,18 +480,81 @@ module vibetrax::vibetrax {
         if (preview_music.is_some()) { music.preview_music = preview_music.destroy_some() };
         if (full_music.is_some()) { music.full_music = full_music.destroy_some() };
 
-        if (new_collaborators.is_some()) {
-            let collaborators = new_collaborators.destroy_some();
-            if (collaborators.length() > 0) {
-                collaborators.do_ref!(|collaborator| {
-                    let count = count_address_occurrences(&collaborators, collaborator.user_address);
-                    assert!(count <= 1, EHAS_DUPLICATES);
-                });
-            };
-            music.collaborators = collaborators;
-        };
+        event::emit(MusicUpdated { 
+            music_id: music.id.to_inner(), 
+            title: music.title, 
+            description: music.description, 
+            genre: music.genre, 
+            music_image: music.music_image, 
+            preview_music: music.preview_music, 
+            full_music: music.full_music 
+        });
+    }
 
-        event::emit(MusicUpdated { music_id: music.id.to_inner() });
+    public fun delete_music(music: Music, ctx: &mut TxContext) {
+        let signer_address = ctx.sender();
+        assert!(music.artist.user_address == signer_address, ENOT_ARTIST);
+        // Only allow deletion if music has never been sold
+        assert!(music.current_owner.user_address == music.artist.user_address, EINVALID_PURCHASE);
+        
+        let Music {id, streaming_table, likes_table, ..} = music;
+
+        // Tables must be explicitly destroyed
+        table::destroy_empty(streaming_table);
+        table::destroy_empty(likes_table);
+        object::delete(id);
+    }
+
+    public fun toggle_sale(music: &mut Music, ctx: &mut TxContext) {
+        let signer_address = ctx.sender();
+        assert!(music.current_owner.user_address == signer_address, ENOT_OWNER);
+        music.for_sale = !music.for_sale;
+
+        event::emit(MusicSaleToggled {
+            music_id: music.id.to_inner(),
+            for_sale: music.for_sale
+        });
+    }
+
+
+    public fun subscribe(
+        subscriber: User,
+        payment: Coin<IOTA>,
+        clock: &Clock,
+        ctx: &mut TxContext
+
+    ){
+        let subscriber_address = ctx.sender();
+        assert!(payment.value()  == SUBSCRIPTION_PRICE, EINSUFFICIENT_AMOUNT );
+        let price = payment.value();
+        public_transfer(payment, TREASURY_ADDRESS);
+        let mut subscriber_user = subscriber;
+        subscriber_user.user_address = subscriber_address;
+
+        let expiry_ms = clock.timestamp_ms() + SUBSCRIPTION_DURATION_MS;
+        event::emit(SubscriptionCreated { subscriber: subscriber_user, price: price, expiry_ms });
+
+        transfer::transfer(Subscription { id: object::new(ctx), subscriber: subscriber_user, price: price, expiry_ms },subscriber_user.user_address);
+    }
+
+    public fun renew_subscription(
+        subscription: &mut Subscription,
+        payment: Coin<IOTA>,
+        clock: &Clock,
+        ctx: &mut TxContext
+    ) {
+        let subscriber_address = ctx.sender();
+        assert!(subscription.subscriber.user_address == subscriber_address, ESUBSCRIPTION_MISMATCH);
+        assert!(payment.value() == SUBSCRIPTION_PRICE, EINSUFFICIENT_AMOUNT);
+        let price = payment.value();
+        public_transfer(payment, TREASURY_ADDRESS);
+
+        let now = clock.timestamp_ms();
+        assert!(now >= subscription.expiry_ms, ESUBSCRIPTION_EXPIRED);
+        
+        subscription.expiry_ms = now + SUBSCRIPTION_DURATION_MS;
+
+        event::emit(SubscriptionRenewed { subscriber: subscription.subscriber, price: price, new_expiry_ms: subscription.expiry_ms });
     }
 
     // === Public-View Functions ===
