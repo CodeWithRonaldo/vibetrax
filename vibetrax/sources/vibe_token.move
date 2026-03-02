@@ -2,128 +2,146 @@
     ====== VIBE TOKEN =====
 
     VIBE is the native platform token of VibeTrax.
-    It is earned by users for streaming music (stream-to-earn),
-    and spent on:
-      - Tipping artists (send VIBE directly to an artist)
-      - Boosting music (artist pays VIBE to promote their track)
+    Total fixed supply: 10,000,000,000 VIBE (10 billion), minted once at deploy.
+    No new VIBE can ever be created — the supply cap is enforced on-chain by
+    the IOTA CoinManager standard, not just by convention.
 
-    HOW IOTA COINS WORK (quick primer):
-    ─────────────────────────────────────
-    1. You define a "one-time witness" (OTW) struct — a struct with the EXACT
-       same name as the module in ALL_CAPS and only the `drop` ability.
-       The Move runtime guarantees it can only ever be created ONCE (at init time).
+    TOKEN ECONOMY:
+    ──────────────
+    - Earn:  Subscribers earn VIBE by streaming music (stream-to-earn, daily cap).
+    - Spend: Tip artists (peer-to-peer), boost music (burned permanently).
+    - Trade: List on a DEX for price discovery and exit liquidity.
 
-    2. You pass that OTW into `coin::create_currency(...)` inside `init`.
-       This registers VIBE as an official coin type and gives you a `TreasuryCap<VIBE_TOKEN>`.
+    WHY CoinManager:
+    ────────────────
+    The IOTA CoinManager standard wraps TreasuryCap and CoinMetadata into a single
+    shared object with extra verifiability for mainnet users and DEX integrators:
+      - Max supply enforced on-chain via enforce_maximum_supply() — one-time, irrevocable.
+      - Total supply, max supply, and remaining supply can be queried by anyone.
+      - Supply and metadata ownership are separate caps — can be renounced independently.
+      - renounce_treasury_ownership() can permanently prove no future minting is possible.
 
-    3. `TreasuryCap<VIBE_TOKEN>` is the "mint key". Whoever holds it can mint new VIBE.
-       We wrap it in a shared `VibeTreasury` object so the vibetrax module can call
-       our `mint_to` function from `stream_music`.
-
-    4. `CoinMetadata<VIBE_TOKEN>` holds the name, symbol, decimals, icon etc.
-       It is frozen (immutable) after creation.
-
-    WHAT NEEDS TO BE WIRED UP IN vibetrax.move:
-    ────────────────────────────────────────────
-    - `stream_music` should call `vibe_token::mint_to(treasury, amount, recipient, ctx)`
-      to reward subscribers with VIBE after a valid stream.
-    - `tip_artist` (to be added) should call `coin::transfer<VIBE_TOKEN>(...)` to send
-      a user's VIBE balance to the artist address.
-    - `boost_music` (to be added) should call `vibe_token::burn(treasury, vibe_coin)`
-      to spend VIBE on a boost plan (deflationary).
+    OBJECT LAYOUT AFTER DEPLOY:
+    ────────────────────────────
+    - CoinManager<VIBE_TOKEN>           — shared, public, queryable by anyone
+    - VibeTreasury                      — shared, accessed only by vibetrax.move functions
+        .treasury_cap                   — needed to call burn() via CoinManager
+        .reward_pool                    — Balance holding all 10B VIBE at launch
+    - CoinManagerMetadataCap<VIBE_TOKEN>— transferred to deployer (update icon URL etc.)
 */
 module vibetrax::vibe_token {
-    use iota::coin::{Self, TreasuryCap};
+    use iota::coin_manager::{Self, CoinManager, CoinManagerTreasuryCap};
+    use iota::balance::{Self, Balance};
+    use iota::coin::Coin;
+    use iota::url;
+
+    // ── Supply Constant ───────────────────────────────────────────────────────
+    // 10,000,000,000 VIBE × 1,000,000 (6 decimals) = 10,000,000,000,000,000 base units.
+    const MAX_SUPPLY: u64 = 10_000_000_000_000_000;
 
     // ── One-Time Witness ──────────────────────────────────────────────────────
-    // MUST be named exactly as the module (VIBE_TOKEN) in ALL_CAPS.
-    // MUST have only `drop`.
-    // The Move runtime passes one (and only one) instance of this into `init`.
+    // MUST match the module name in ALL_CAPS with only `drop`.
     public struct VIBE_TOKEN has drop {}
 
-    // ── Shared Treasury ───────────────────────────────────────────────────────
-    // We wrap the TreasuryCap in a shared object so that other modules
-    // (vibetrax.move) can call `mint_to` without owning the cap themselves.
-    // If you want admin-only minting instead, make this an owned object by
-    // using transfer::transfer to send it to the deployer's address.
+    // ── VibeTreasury ──────────────────────────────────────────────────────────
+    // Shared object that vibetrax.move functions interact with.
+    // Holds the CoinManagerTreasuryCap (required for burn) and the reward pool
+    // balance (all 10B VIBE pre-minted at deploy, drawn down per stream reward).
+    //
+    // NOTE: CoinManager<VIBE_TOKEN> is shared separately — it is the public-facing
+    // object anyone can query for supply data. VibeTreasury is the private
+    // operational object only platform functions touch.
     public struct VibeTreasury has key {
         id: UID,
-        cap: TreasuryCap<VIBE_TOKEN>
+        treasury_cap: CoinManagerTreasuryCap<VIBE_TOKEN>,
+        reward_pool: Balance<VIBE_TOKEN>
     }
 
     // ── Init ──────────────────────────────────────────────────────────────────
-    // Called ONCE automatically at package publish time.
-    // Sets up the VIBE coin type and makes the treasury a shared object.
+    // Runs ONCE at package publish. Creates VIBE via CoinManager so that supply
+    // and metadata are publicly verifiable on-chain from day one.
     fun init(witness: VIBE_TOKEN, ctx: &mut TxContext) {
-        // coin::create_currency registers the VIBE coin type on-chain.
-        // Parameters:
-        //   witness     - the OTW, proves this is the one-time setup call
-        //   decimals    - 6 decimal places (1 VIBE = 1_000_000 base units)
-        //   symbol      - shown in wallets as "VIBE"
-        //   name        - full display name
-        //   description - shown in explorers
-        //   icon_url    - option::none() for now; update with option::some(url) later
-        // Returns:
-        //   treasury_cap - the mint/burn key, stored in VibeTreasury
-        //   metadata     - coin info object, frozen so it can't be changed
-        let (treasury_cap, metadata) = coin::create_currency(
+        // coin_manager::create registers the coin type and returns three objects:
+        //   treasury_cap — needed to mint/burn, stored in VibeTreasury
+        //   metadata_cap — needed to update name/symbol/icon, sent to deployer
+        //   manager      — shared publicly; anyone can query supply & metadata
+        //
+        // ICON URL (IMPORTANT before mainnet):
+        //   Currently set to a Google Drive link — temporary placeholder only.
+        //   Google Drive links are not permanent or decentralized.
+        //   Before mainnet launch:
+        //     1. Upload the logo to IPFS (e.g. via Pinata or NFT.Storage)
+        //     2. Call coin_manager::update_icon_url() using your CoinManagerMetadataCap
+        //        with the IPFS URL: ipfs://<CID> or https://ipfs.io/ipfs/<CID>
+        //   You do NOT need to redeploy — the MetadataCap allows updating after deploy.
+        let (treasury_cap, metadata_cap, mut manager) = coin_manager::create(
             witness,
             6,
             b"VIBE",
             b"Vibe Token",
             b"VibeTrax platform token. Earn by streaming, spend on tips and boosts.",
-            option::none(),
+            option::some(url::new_unsafe_from_bytes(b"https://drive.google.com/uc?export=view&id=1kuxtdkORt6Bf21PUPKa0Dis77HB1n8lR")),
             ctx
         );
 
-        // Freeze metadata — standard practice so nobody can alter name/symbol after launch.
-        transfer::public_freeze_object(metadata);
+        // Pre-mint the entire 10B supply into the reward pool at genesis.
+        // Nothing is ever minted again — this is the one and only mint call.
+        let reward_pool = coin_manager::mint_balance(&treasury_cap, &mut manager, MAX_SUPPLY);
 
-        // Share the treasury so vibetrax.move can call mint_to in stream_music.
+        // Enforce the 10B cap on-chain. This is a one-time, irrevocable action.
+        // After this: total_supply == maximum_supply, so any future mint attempt
+        // aborts at the framework level — no trust in our code required.
+        coin_manager::enforce_maximum_supply(&treasury_cap, &mut manager, MAX_SUPPLY);
+
+        // Share CoinManager publicly — wallets, explorers, DEXes can query it.
+        transfer::public_share_object(manager);
+
+        // Send metadata cap to deployer so icon URL can be updated before mainnet.
+        // Call coin_manager::renounce_metadata_ownership() when metadata is final.
+        transfer::public_transfer(metadata_cap, ctx.sender());
+
+        // Wrap treasury cap + reward pool in our shared operational object.
         transfer::share_object(VibeTreasury {
             id: object::new(ctx),
-            cap: treasury_cap
+            treasury_cap,
+            reward_pool
         });
     }
 
-    // ── Mint ──────────────────────────────────────────────────────────────────
-    // Mints `amount` VIBE (in base units) and sends it to `recipient`.
-    //
-    // Called from vibetrax::stream_music to reward a subscriber after streaming.
-    // Example call in vibetrax.move:
-    //   vibe_token::mint_to(treasury, STREAM_TOKEN_REWARD, subscriber_address, ctx);
-    //
-    // IMPORTANT — decimal alignment:
-    //   STREAM_TOKEN_REWARD is currently 10 in vibetrax.move (plain units).
-    //   With 6 decimals, 10 VIBE = 10_000_000 base units.
-    //   Update STREAM_TOKEN_REWARD to 10_000_000 in vibetrax.move to match.
-    public fun mint_to(
+    // ── Pay Stream Reward ─────────────────────────────────────────────────────
+    // Pulls `amount` VIBE from the pre-minted reward pool and sends to `recipient`.
+    // No-op if pool is exhausted — rewards simply stop; no new minting ever occurs.
+    // Called from vibetrax::stream_music.
+    public fun pay_stream_reward(
         treasury: &mut VibeTreasury,
         amount: u64,
         recipient: address,
         ctx: &mut TxContext
     ) {
-        let vibe = coin::mint(&mut treasury.cap, amount, ctx);
-        transfer::public_transfer(vibe, recipient);
+        if (balance::value(&treasury.reward_pool) >= amount) {
+            let vibe = iota::coin::from_balance(
+                balance::split(&mut treasury.reward_pool, amount),
+                ctx
+            );
+            transfer::public_transfer(vibe, recipient);
+        }
     }
 
     // ── Burn ──────────────────────────────────────────────────────────────────
-    // Destroys VIBE permanently. Called when a user pays for a boost plan.
-    // Burning makes VIBE deflationary — as more people boost, supply shrinks.
-    //
-    // Called from vibetrax::boost_music (to be implemented):
-    //   vibe_token::burn(treasury, vibe_payment);
+    // Destroys VIBE permanently via CoinManager, reducing tracked total supply.
+    // Called from vibetrax::boost_music — every boost permanently shrinks supply.
     public fun burn(
         treasury: &mut VibeTreasury,
-        vibe: iota::coin::Coin<VIBE_TOKEN>
+        manager: &mut CoinManager<VIBE_TOKEN>,
+        vibe: Coin<VIBE_TOKEN>
     ) {
-        coin::burn(&mut treasury.cap, vibe);
+        coin_manager::burn(&treasury.treasury_cap, manager, vibe);
     }
 
-    // ── Total Supply View ─────────────────────────────────────────────────────
-    // Returns how many VIBE base units have been minted in total.
-    // Useful for frontend dashboards and analytics.
-    public fun total_supply(treasury: &VibeTreasury): u64 {
-        coin::total_supply(&treasury.cap)
+    // ── Reward Pool Balance ───────────────────────────────────────────────────
+    // Returns VIBE base units still available for stream rewards.
+    // When this hits 0, streaming rewards stop.
+    public fun reward_pool_balance(treasury: &VibeTreasury): u64 {
+        balance::value(&treasury.reward_pool)
     }
 }

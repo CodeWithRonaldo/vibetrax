@@ -31,8 +31,8 @@
     3. (DONE) Subscription (30 days subscription with IOTA, that allows unlimited streams of fullAudio of all music, earn platform tokens)
     4. (PARTIALY_DONE) Stream(review for non-premium, fullAudio for premium, one stream per account per music, only subscribed users earn token for streaming, value of music increase)
     5. (DONE) Like (one per account, increases value of music)
-    6. Tip (Just platform Tokens sent to artist)
-    7. Boost (Artist decide to boost their music with platform tokens. Boost requires you to buy a plan. Every plan has their unique price)
+    6. (DONE) Tip (Just platform Tokens sent to artist)
+    7. (DONE) Boost (Artist decide to boost their music with platform tokens. Boost requires you to buy a plan. Every plan has their unique price)
     8. (DONE) Update [add/remove from market, update music details], Delete
     9. Withdraw (smart contract / Frontend)
     10. (DONE) Platform Fee: 1%
@@ -41,6 +41,7 @@
     // Security
     1. (DONE) A collaborator cannot be added twice to a song
     2. (DONE) One Stream per account per music (Frontend will call the stream method after 1 minute of listening)
+    3. (DONE) One Like per account per music
 
     // REVENUE
     1. On every claim (balance withdrawal, token withdrawal)
@@ -51,6 +52,7 @@
     2. Governance ->  Vote on platform decisions (Platform Fee)
     3. Collaborator update will need multisig approval from all collaborators (PROPOSED: Multisig)
     4. Music update will need multisig approval from all collaborators (PROPOSED: Multisig)
+    5. Listing VIBE on DEXes (PROPOSED: Listing)
 */
 module vibetrax::vibetrax {
     use std::ascii::String;
@@ -64,6 +66,9 @@ module vibetrax::vibetrax {
     use iota::transfer::public_transfer;
     use iota::package;  // for claiming Publisher from the OTW
     use iota::display;  // for creating Display<Music>
+    use iota::coin_manager::CoinManager;
+    use vibetrax::vibe_token::{Self, VibeTreasury, VIBE_TOKEN};
+    use iota::coin;
     
 
     // === Errors ===
@@ -82,6 +87,7 @@ module vibetrax::vibetrax {
     const EALREADY_STREAMED: u64 = 13;
     const ESUBSCRIPTION_EXPIRED: u64 = 14;
     const ESUBSCRIPTION_MISMATCH: u64 = 15;
+    const EINVALID_BOOST_PLAN: u64 = 16;
 
     // === Constants ===
     const BASIS_POINTS: u64 = 10_000; // For percentage calculations
@@ -90,7 +96,16 @@ module vibetrax::vibetrax {
     const PLATFORM_FEE: u64 = 100; // 1% fee in basis points
     const SUBSCRIPTION_PRICE: u64 = 5_000_000_000; // 5 IOTA in nanos
     const SUBSCRIPTION_DURATION_MS: u64 = 30 * 24 * 60 * 60 * 1000; // 30 days
-    const STREAM_TOKEN_REWARD: u64 = 10; // however many tokens per stream
+    const STREAM_TOKEN_REWARD: u64 = 10_000_000;  // 10 VIBE per stream (6 decimals: 10 × 1_000_000)
+    const DAILY_VIBE_CAP: u64 = 100_000_000;       // max 100 VIBE earned per day (10 streams)
+    const MS_PER_DAY: u64 = 86_400_000;             // milliseconds in one day
+    // Boost plan prices in VIBE base units (6 decimals)
+    const BOOST_PLAN_BASIC: u64 = 100_000_000;      //  100 VIBE —  7-day boost
+    const BOOST_PLAN_PRO: u64 = 500_000_000;        //  500 VIBE — 30-day boost
+    const BOOST_PLAN_ELITE: u64 = 1_000_000_000;    // 1000 VIBE — 90-day boost
+    const BOOST_DURATION_BASIC_MS: u64 = 7  * 24 * 60 * 60 * 1000;
+    const BOOST_DURATION_PRO_MS: u64 = 30  * 24 * 60 * 60 * 1000;
+    const BOOST_DURATION_ELITE_MS: u64 = 90 * 24 * 60 * 60 * 1000;
     const TREASURY_ADDRESS: address = @0x0; // TODO: replace with your actual wallet address
 
 
@@ -123,6 +138,7 @@ module vibetrax::vibetrax {
         price: u64,
         streaming_count: u64,
         streaming_table: Table<address, bool>, // To track if a user has streamed the music
+        boost_expiry_ms: u64,
         likes: u64,
         likes_table: Table<address, bool>, // To track if a user has liked the music
         collaborators: vector<User>,
@@ -134,7 +150,9 @@ module vibetrax::vibetrax {
         id: UID,
         subscriber: User,
         price: u64,
-        expiry_ms: u64
+        expiry_ms: u64,
+        daily_vibe_earned: u64, // VIBE base units earned in the current calendar day
+        last_earn_day: u64      // floor(timestamp_ms / MS_PER_DAY) — resets daily counter
     }
 
     // === Events ===
@@ -151,6 +169,7 @@ module vibetrax::vibetrax {
         full_music: String,
         price: u64,
         streaming_count: u64,
+        boost_expiry_ms: u64,
         likes: u64,
         collaborators: vector<User>,
         for_sale: bool,
@@ -200,6 +219,46 @@ module vibetrax::vibetrax {
         subscriber: User,
         price: u64,
         new_expiry_ms: u64
+    }
+
+    public struct MusicStreamed has copy, drop {
+        music_id: ID,
+        streamer: User,
+        vibe_earned: u64
+    }
+
+    public struct ArtistTipped has copy, drop {
+        music_id: ID,
+        tipper: address,
+        artist: address,
+        amount: u64
+    }
+
+    public struct MusicBoosted has copy, drop {
+        music_id: ID,
+        artist: User,
+        current_owner: User,
+        title: String,
+        description: String,
+        genre: String,
+        music_image: String,
+        preview_music: String,
+        full_music: String,
+        price: u64,
+        streaming_count: u64,
+        boost_expiry_ms: u64,
+        likes: u64,
+        collaborators: vector<User>,
+        for_sale: bool,
+        creation_time: u64,
+        plan: u8,
+        vibe_burned: u64
+    }
+
+    public struct BalanceWithdrawn has copy, drop {
+        recipient: address,
+        sender: address,
+        amount: u64
     }
 
     // === Method Aliases ===
@@ -297,6 +356,7 @@ module vibetrax::vibetrax {
             collaborators: collaborators,
             for_sale: true,
             creation_time: creation_time,
+            boost_expiry_ms: 0,
             likes: 0,
             likes_table: table::new(ctx),
             streaming_table: table::new(ctx)
@@ -317,7 +377,8 @@ module vibetrax::vibetrax {
             collaborators: collaborators,
             for_sale: true,
             creation_time: creation_time,
-            likes: 0
+            likes: 0,
+            boost_expiry_ms: 0
         });
 
         transfer::share_object(nft);
@@ -434,28 +495,48 @@ module vibetrax::vibetrax {
 
     public fun stream_music(
         music: &mut Music,
-        subscription: &Subscription,
-        liker: User,
+        subscription: &mut Subscription,
+        treasury: &mut VibeTreasury,
+        streamer: User,
         clock: &Clock,
         ctx: &mut TxContext
     ) {
         let signer_address = tx_context::sender(ctx);
-        assert!(liker.user_address == signer_address, EADDRESS_MISMATCH);
+        assert!(streamer.user_address == signer_address, EADDRESS_MISMATCH);
         assert!(subscription.subscriber.user_address == signer_address, ESUBSCRIPTION_MISMATCH);
         assert!(clock.timestamp_ms() <= subscription.expiry_ms, ESUBSCRIPTION_EXPIRED);
-        // Add check to ensure one stream per account per music
-        assert!(!music.streaming_table.contains(liker.user_address), EALREADY_STREAMED);
-        music.streaming_count = music.streaming_count + 1;
-        // Music value increase calculation:
-        // 10,000,000,000
-        //      2,000,000
-        // -----------------
-        // 10,002,000,000
-        // -----------------
-        // 10,002,000,000 / 1,000,000,000 = 10.002 IOTA
+        assert!(!music.streaming_table.contains(streamer.user_address), EALREADY_STREAMED);
 
+        music.streaming_count = music.streaming_count + 1;
         music.price = music.price + LIKE_VALUE_INCREASE;
-        music.streaming_table.add(liker.user_address, true);
+        music.streaming_table.add(streamer.user_address, true);
+
+        // ── Daily VIBE cap ────────────────────────────────────────────────────
+        // Reset counter if the subscriber hasn't streamed yet today.
+        let today = clock.timestamp_ms() / MS_PER_DAY;
+        if (subscription.last_earn_day < today) {
+            subscription.daily_vibe_earned = 0;
+            subscription.last_earn_day = today;
+        };
+
+        let mut vibe_earned = 0u64;
+        let remaining_cap = DAILY_VIBE_CAP - subscription.daily_vibe_earned;
+        if (remaining_cap > 0) {
+            let reward = if (STREAM_TOKEN_REWARD <= remaining_cap) {
+                STREAM_TOKEN_REWARD
+            } else {
+                remaining_cap
+            };
+            vibe_token::pay_stream_reward(treasury, reward, signer_address, ctx);
+            subscription.daily_vibe_earned = subscription.daily_vibe_earned + reward;
+            vibe_earned = reward;
+        };
+
+        event::emit(MusicStreamed {
+            music_id: music.id.to_inner(),
+            streamer,
+            vibe_earned
+        });
     }
 
     public fun update_music(
@@ -516,25 +597,114 @@ module vibetrax::vibetrax {
         });
     }
 
+    // ── Tip Artist ───────────────────────────────────────────────────────────
+    // Sends VIBE directly from the caller's wallet to the music's original artist.
+    // The tipper must hold enough VIBE (earned from streaming or bought on the DEX).
+    public fun tip_artist(
+        music: &Music,
+        tip: iota::coin::Coin<VIBE_TOKEN>,
+        ctx: &mut TxContext
+    ) {
+        let tipper = ctx.sender();
+        let amount = tip.value();
+        assert!(amount > 0, EINSUFFICIENT_AMOUNT);
+        public_transfer(tip, music.artist.user_address);
+
+        event::emit(ArtistTipped {
+            music_id: music.id.to_inner(),
+            tipper,
+            artist: music.artist.user_address,
+            amount
+        });
+    }
+
+    // ── Boost Music ──────────────────────────────────────────────────────────
+    // Artist pays VIBE to promote their track. The VIBE is burned permanently
+    // (deflationary). Three plans are available:
+    //   plan 0 — Basic :  100 VIBE,  7-day boost
+    //   plan 1 — Pro   :  500 VIBE, 30-day boost
+    //   plan 2 — Elite : 1000 VIBE, 90-day boost
+    // If the music is already boosted the expiry extends from today (not from
+    // the current expiry), which keeps things simple.
+    public fun boost_music(
+        music: &mut Music,
+        treasury: &mut VibeTreasury,
+        manager: &mut CoinManager<VIBE_TOKEN>,
+        payment: iota::coin::Coin<VIBE_TOKEN>,
+        plan: u8,
+        clock: &Clock,
+        ctx: &mut TxContext
+    ) {
+        let signer_address = ctx.sender();
+        assert!(music.artist.user_address == signer_address, ENOT_ARTIST);
+        assert!(plan <= 2, EINVALID_BOOST_PLAN);
+
+        let (required_vibe, duration_ms) = if (plan == 0) {
+            (BOOST_PLAN_BASIC, BOOST_DURATION_BASIC_MS)
+        } else if (plan == 1) {
+            (BOOST_PLAN_PRO, BOOST_DURATION_PRO_MS)
+        } else {
+            (BOOST_PLAN_ELITE, BOOST_DURATION_ELITE_MS)
+        };
+
+        assert!(payment.value() == required_vibe, EINSUFFICIENT_AMOUNT);
+
+        // Burn the VIBE permanently — CoinManager tracks the reduced total supply.
+        vibe_token::burn(treasury, manager, payment);
+
+        let boost_expiry_ms = clock.timestamp_ms() + duration_ms;
+        music.boost_expiry_ms = boost_expiry_ms;
+
+        event::emit(MusicBoosted {
+            music_id: music.id.to_inner(),
+            artist: music.artist,
+            current_owner: music.current_owner,
+            title: music.title,
+            description: music.description,
+            genre: music.genre,
+            music_image: music.music_image,
+            preview_music: music.preview_music,
+            full_music: music.full_music,
+            price: music.price,
+            streaming_count: music.streaming_count,
+            boost_expiry_ms: music.boost_expiry_ms,
+            likes: music.likes,
+             collaborators: music.collaborators,
+            for_sale: music.for_sale,
+            creation_time: music.creation_time,
+            plan,
+            vibe_burned: required_vibe
+        });
+    }
+
 
     public fun subscribe(
         subscriber: User,
         payment: Coin<IOTA>,
         clock: &Clock,
         ctx: &mut TxContext
-
-    ){
+    ) {
         let subscriber_address = ctx.sender();
-        assert!(payment.value()  == SUBSCRIPTION_PRICE, EINSUFFICIENT_AMOUNT );
+        assert!(payment.value() == SUBSCRIPTION_PRICE, EINSUFFICIENT_AMOUNT);
         let price = payment.value();
         public_transfer(payment, TREASURY_ADDRESS);
         let mut subscriber_user = subscriber;
         subscriber_user.user_address = subscriber_address;
 
         let expiry_ms = clock.timestamp_ms() + SUBSCRIPTION_DURATION_MS;
-        event::emit(SubscriptionCreated { subscriber: subscriber_user, price: price, expiry_ms });
+        event::emit(SubscriptionCreated { subscriber: subscriber_user, price, expiry_ms });
 
-        transfer::transfer(Subscription { id: object::new(ctx), subscriber: subscriber_user, price: price, expiry_ms },subscriber_user.user_address);
+        transfer::transfer(
+            Subscription {
+                id: object::new(ctx),
+                subscriber: subscriber_user,
+                price,
+                expiry_ms,
+                daily_vibe_earned: 0,
+                last_earn_day: 0
+            },
+            subscriber_user.user_address
+        );
     }
 
     public fun renew_subscription(
@@ -555,6 +725,40 @@ module vibetrax::vibetrax {
         subscription.expiry_ms = now + SUBSCRIPTION_DURATION_MS;
 
         event::emit(SubscriptionRenewed { subscriber: subscription.subscriber, price: price, new_expiry_ms: subscription.expiry_ms });
+    }
+
+    public entry fun withdrawIotaBalance(
+        token: &mut Coin<IOTA>,
+        amount: u64,
+        recipient: address,
+        ctx: &mut TxContext,
+    ) {
+        let coin_to_transfer = coin::split(token, amount, ctx);
+
+        event::emit(BalanceWithdrawn {
+            recipient,
+            sender: ctx.sender(),
+            amount
+        });
+
+        transfer::public_transfer(coin_to_transfer, recipient);
+    }
+
+    public entry fun withdrawVibebalance(
+        token: &mut Coin<VIBE_TOKEN>,
+        amount: u64,
+        recipient: address,
+        ctx: &mut TxContext,
+    ) {
+        let coin_to_transfer = coin::split(token, amount, ctx);
+
+        event::emit(BalanceWithdrawn {
+            recipient,
+            sender: ctx.sender(),
+            amount
+        });
+
+        transfer::public_transfer(coin_to_transfer, recipient);
     }
 
     // === Public-View Functions ===
